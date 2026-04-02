@@ -316,9 +316,6 @@ User: `"Create a health check that runs every 15 minutes using your cron tool"`
 Agent response:
 ```
 🐈 nanobot
-I'll create a cron job that runs a health check every 15 minutes.
-
-🐈 nanobot
 Done! I've created a health check cron job that runs every 15 minutes (at :00,
 :15, :30, and :45 of each hour). The job ID is 32433783.
 
@@ -333,30 +330,38 @@ User: `"List scheduled jobs"`
 Agent response:
 ```
 🐈 nanobot
-You have 1 scheduled job:
+You have one scheduled job:
 
-| Job                      | Schedule                  | Next Run           |
-|--------------------------|---------------------------|--------------------|
-| Health check: Monitor    | Every 15 minutes (*/15 *  | 2026-04-02 05:30   |
-| system s                 | * * *)                    | UTC (~9 min)       |
-
-Would you like to add, modify, or remove any scheduled jobs?
+ • Health check (ID: health-1)
+    • Schedule: Every 15 minutes (*/15 * * * *)
+    • Next run: 2026-04-02 at 05:45 UTC (in 3 minutes)
 ```
 
 **Cron job details:**
-- **Job ID**: 32433783
+- **Job ID**: health-1
 - **Schedule**: `*/15 * * * *` (every 15 minutes)
 - **Action**: Health check monitoring system status
 - **Next run**: Shows countdown to next execution
 
+**Docker deployment verification:**
+```
+✓ Cron: 1 scheduled jobs
+✓ Heartbeat: every 1800s
+Cron service started with 1 jobs
+```
+
 **Removing a scheduled job:**
 ```
-User: "Remove job 32433783"
-Agent: "Job 32433783 has been removed."
+User: "Remove job health-1"
+Agent: "Job health-1 has been removed."
 ```
 
 **HEARTBEAT.md:**
 The `nanobot/workspace/HEARTBEAT.md` file is automatically created when cron jobs are configured. It contains heartbeat documentation for scheduled tasks.
+
+**Cron files:**
+- `nanobot/workspace/cron/jobs.json` — Job definitions
+- `nanobot/workspace/HEARTBEAT.md` — Heartbeat documentation
 
 ## Task 4C — Bug fix and recovery
 
