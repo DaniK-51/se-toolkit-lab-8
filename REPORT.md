@@ -159,40 +159,100 @@ Is there something specific you'd like help with?
 
 ## Task 3A — Structured logging
 
-**Happy-path log excerpt:**
+**Happy-path log excerpt (successful request):**
 ```
-request_started
-auth_success
-db_query
-request_completed
+2026-04-02 04:54:53,081 INFO [lms_backend.main] [main.py:62] [trace_id=1f8e0dc8ee16d9adad28b0a8a94388cd span_id=da04c4dd67298206 resource.service.name=Learning Management Service trace_sampled=True] - request_started
+2026-04-02 04:54:53,082 INFO [lms_backend.auth] [auth.py:30] [trace_id=1f8e0dc8ee16d9adad28b0a8a94388cd span_id=da04c4dd67298206 resource.service.name=Learning Management Service trace_sampled=True] - auth_success
+2026-04-02 04:54:53,082 INFO [lms_backend.db.items] [items.py:16] [trace_id=1f8e0dc8ee16d9adad28b0a8a94388cd span_id=da04c4dd67298206 resource.service.name=Learning Management Service trace_sampled=True] - db_query
+2026-04-02 04:54:53,175 INFO [lms_backend.main] [main.py:74] [trace_id=1f8e0dc8ee16d9adad28b0a8a94388cd span_id=da04c4dd67298206 resource.service.name=Learning Management Service trace_sampled=True] - request_completed
 ```
+
+**Structured fields present:**
+- `trace_id=1f8e0dc8ee16d9adad28b0a8a94388cd` — Correlates all spans for this request
+- `span_id=da04c4dd67298206` — Identifies this specific span
+- `resource.service.name=Learning Management Service` — Service identifier
+- `trace_sampled=True` — Trace was sampled for VictoriaTraces
+- `event=request_started|auth_success|db_query|request_completed` — Event type
 
 **Error-path log excerpt (PostgreSQL stopped):**
 ```
-db_query ERROR
-items_list_failed_as_not_found
+2026-04-02 05:00:01,390 ERROR [lms_backend.routers.items] [items.py:34] [trace_id=578129bf34581aa7c1c6c9d9b03452a7 span_id=5e715eb7e1ed59e2 resource.service.name=Learning Management Service trace_sampled=True] - items_list_failed
 ```
 
-**VictoriaLogs query:** `_time:10m severity:ERROR resource.service.name:"Learning Management Service"`
+**VictoriaLogs query:**
+```
+_time:10m severity:ERROR resource.service.name:"Learning Management Service"
+```
+
+This returns all ERROR level logs from the LMS backend in the last 10 minutes.
 
 ## Task 3B — Traces
 
-Traces show span hierarchy across services with `trace_id` correlation. Error traces show the failing operation in the span timeline.
+**Trace structure in VictoriaTraces:**
+
+Each trace contains:
+- `traceID`: Unique identifier (e.g., `578129bf34581aa7c1c6c9d9b03452a7`)
+- `spans[]`: Array of span objects with:
+  - `operationName`: The operation (e.g., `request_started`, `auth_success`, `db_query`)
+  - `startTime`: Unix timestamp in microseconds
+  - `duration`: Span duration in microseconds
+  - `tags`: Key-value metadata (service name, component, etc.)
+  - `logs`: Timestamped log entries within the span
+
+**Example trace flow for a request:**
+```
+trace_id: 578129bf34581aa7c1c6c9d9b03452a7
+├── span: request_started (duration: 0μs)
+├── span: auth_success (duration: 0μs)
+├── span: db_query (duration: ~100ms) ← Database connection failure here
+└── span: items_list_failed (duration: 0μs) ← Error logged
+```
+
+**Error trace identification:**
+1. Find error log with `trace_id=578129bf34581aa7c1c6c9d9b03452a7`
+2. Query VictoriaTraces: `/select/jaeger/api/traces/{trace_id}`
+3. Inspect span hierarchy to find where the failure occurred
+4. Check span tags and logs for error details
 
 ## Task 3C — Observability MCP tools
 
 **Created MCP tools:**
-- `mcp_obs_logs_search` — Search VictoriaLogs using LogsQL
-- `mcp_obs_logs_error_count` — Count errors per service
+- `mcp_obs_logs_search` — Search VictoriaLogs using LogsQL query
+- `mcp_obs_logs_error_count` — Count errors per service over time window
 - `mcp_obs_traces_list` — List recent traces for a service
 - `mcp_obs_traces_get` — Fetch specific trace by ID
 
 **Agent response to "Any LMS backend errors in the last 10 minutes?":**
-The agent uses the observability skill to:
-1. Call `mcp_obs_logs_error_count(minutes=10)`
-2. If errors found, call `mcp_obs_logs_search` with service filter
-3. Extract trace_id and call `mcp_obs_traces_get`
-4. Summarize findings concisely
+```
+🐈 nanobot
+I'll check for LMS backend errors in the last 10 minutes.
+
+🐈 nanobot
+No errors found in the last 10 minutes. The system appears healthy with no
+logged errors across any services during this time window.
+```
+
+**Agent investigation flow:**
+1. Calls `mcp_obs_logs_error_count(minutes=10)` to check for recent errors
+2. If errors found, calls `mcp_obs_logs_search(query="severity:ERROR resource.service.name:\"Learning Management Service\"", time_range="10m")`
+3. Extracts `trace_id` from log results
+4. Calls `mcp_obs_traces_get(trace_id="...")` to fetch full trace
+5. Summarizes findings: service name, error message, failing operation
+
+**LogsQL query examples:**
+```sql
+-- All errors in last hour
+_time:1h severity:ERROR
+
+-- LMS backend errors only
+_time:10m severity:ERROR resource.service.name:"Learning Management Service"
+
+-- Database query failures
+_time:30m event:db_query severity:ERROR
+
+-- Find traces with errors
+_time:10m trace_id:* severity:ERROR
+```
 
 ## Task 4A — Multi-step investigation
 
