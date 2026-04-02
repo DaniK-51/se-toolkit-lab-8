@@ -4,48 +4,76 @@
 
 **Agent response to "What is 2+2?":**
 ```
+🐈 nanobot
 2 + 2 = 4
 ```
 
 **Agent response to "What is the agentic loop?":**
-The agentic loop is the fundamental cycle that an AI agent follows to accomplish tasks autonomously. It typically consists of these core stages:
-1. **Perceive** — Gather information about the current state
-2. **Reason** — Analyze the situation, plan next steps
-3. **Act** — Execute the chosen action
-4. **Observe** — Evaluate the results
-5. **Repeat** — Continue until the goal is achieved
+```
+🐈 nanobot
+The agentic loop is the fundamental cycle that an AI agent follows to accomplish 
+tasks autonomously. It typically consists of these core stages:
+
+1. Perceive — Gather information about the current state (read files, check outputs, 
+   observe environment)
+2. Reason — Analyze the situation, plan next steps, and decide what action to take
+3. Act — Execute the chosen action (run commands, write files, call tools, send messages)
+4. Observe — Evaluate the results of the action and detect any errors or changes
+5. Repeat — Continue the loop until the goal is achieved or a stopping condition is met
+
+This loop enables agents to work iteratively toward complex goals, adapt to unexpected 
+outcomes, self-correct when errors occur, and break down large tasks into manageable steps.
+```
 
 ## Task 1B — Agent with LMS tools
 
 **Agent response to "What labs are available?":**
 ```
+🐈 nanobot
 Here are the available labs:
-1. Lab 01 – Products, Architecture & Roles
-2. Lab 02 — Run, Fix, and Deploy a Backend Service
-3. Lab 03 — Backend API: Explore, Debug, Implement, Deploy
-4. Lab 04 — Testing, Front-end, and AI Agents
-5. Lab 05 — Data Pipeline and Analytics Dashboard
-6. Lab 06 — Build Your Own Agent
-7. Lab 07 — Build a Client with an AI Coding Agent
-8. lab-08
 
-Which lab would you like to explore? I can show you pass rates, completion
-rates, submission timelines, group performance, and top learners for any
-specific lab.
+ 1 Lab 01 – Products, Architecture & Roles
+ 2 Lab 02 — Run, Fix, and Deploy a Backend Service
+ 3 Lab 03 — Backend API: Explore, Debug, Implement, Deploy
+ 4 Lab 04 — Testing, Front-end, and AI Agents
+ 5 Lab 05 — Data Pipeline and Analytics Dashboard
+ 6 Lab 06 — Build Your Own Agent
+ 7 Lab 07 — Build a Client with an AI Coding Agent
+ 8 lab-08
+
+Which lab would you like to explore? I can show you pass rates, completion rates, 
+submission timelines, group performance, and top learners for any specific lab.
 ```
 
-The agent successfully called `mcp_lms_lms_labs` and retrieved real data from the LMS backend.
+The agent successfully called `mcp_lms_lms_labs` and retrieved real lab names from the LMS backend.
 
 ## Task 1C — Skill prompt
 
 **Agent response to "Show me the scores" (without specifying lab):**
-The agent first called `mcp_lms_lms_labs` to get available labs, then presented them and asked which lab the user wants to explore. When a specific lab is chosen, it calls `mcp_lms_lms_pass_rates` to show the scores.
+```
+🐈 nanobot
+I'll check what labs are available in the LMS first.
 
-Example interaction:
-- User: "Show me the scores"
-- Agent: Lists all 8 labs and asks which one to explore
-- User: "Lab 01"
-- Agent: Shows pass rates table for Lab 01 with task scores and attempt counts
+🐈 nanobot
+I can show scores for these labs:
+
+ 1 Lab 01 – Products, Architecture & Roles
+ 2 Lab 02 — Run, Fix, and Deploy a Backend Service
+ 3 Lab 03 — Backend API: Explore, Debug, Implement, Deploy
+ 4 Lab 04 — Testing, Front-end, and AI Agents
+ 5 Lab 05 — Data Pipeline and Analytics Dashboard
+ 6 Lab 06 — Build Your Own Agent
+ 7 Lab 07 — Build a Client with an AI Coding Agent
+ 8 lab-08
+
+Which lab would you like to see the scores for?
+```
+
+The LMS skill prompt guides the agent to:
+1. First call `mcp_lms_lms_labs` to get available labs
+2. Present the list to the user
+3. Ask which lab they want to explore
+4. Then call `mcp_lms_lms_pass_rates` with the selected lab parameter
 
 ## Task 2A — Deployed agent
 
