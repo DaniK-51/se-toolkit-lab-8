@@ -309,7 +309,54 @@ GET http://localhost:42011/select/jaeger/api/traces/{traceID}
 
 ## Task 4B — Proactive health check
 
-The agent supports scheduled jobs via the built-in `cron` tool. Users can create health checks that run every 2-15 minutes and post reports to the chat.
+**Creating a scheduled health check:**
+
+User: `"Create a health check that runs every 15 minutes using your cron tool"`
+
+Agent response:
+```
+🐈 nanobot
+I'll create a cron job that runs a health check every 15 minutes.
+
+🐈 nanobot
+Done! I've created a health check cron job that runs every 15 minutes (at :00,
+:15, :30, and :45 of each hour). The job ID is 32433783.
+
+The health check will monitor system status and log any issues. You can list or
+remove this job later using the job ID if needed.
+```
+
+**Listing scheduled jobs:**
+
+User: `"List scheduled jobs"`
+
+Agent response:
+```
+🐈 nanobot
+You have 1 scheduled job:
+
+| Job                      | Schedule                  | Next Run           |
+|--------------------------|---------------------------|--------------------|
+| Health check: Monitor    | Every 15 minutes (*/15 *  | 2026-04-02 05:30   |
+| system s                 | * * *)                    | UTC (~9 min)       |
+
+Would you like to add, modify, or remove any scheduled jobs?
+```
+
+**Cron job details:**
+- **Job ID**: 32433783
+- **Schedule**: `*/15 * * * *` (every 15 minutes)
+- **Action**: Health check monitoring system status
+- **Next run**: Shows countdown to next execution
+
+**Removing a scheduled job:**
+```
+User: "Remove job 32433783"
+Agent: "Job 32433783 has been removed."
+```
+
+**HEARTBEAT.md:**
+The `nanobot/workspace/HEARTBEAT.md` file is automatically created when cron jobs are configured. It contains heartbeat documentation for scheduled tasks.
 
 ## Task 4C — Bug fix and recovery
 
