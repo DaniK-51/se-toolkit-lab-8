@@ -159,32 +159,53 @@ Is there something specific you'd like help with?
 
 ## Task 3A — Structured logging
 
-**Happy-path log excerpt (successful request):**
-```
-2026-04-02 04:54:53,081 INFO [lms_backend.main] [main.py:62] [trace_id=1f8e0dc8ee16d9adad28b0a8a94388cd span_id=da04c4dd67298206 resource.service.name=Learning Management Service trace_sampled=True] - request_started
-2026-04-02 04:54:53,082 INFO [lms_backend.auth] [auth.py:30] [trace_id=1f8e0dc8ee16d9adad28b0a8a94388cd span_id=da04c4dd67298206 resource.service.name=Learning Management Service trace_sampled=True] - auth_success
-2026-04-02 04:54:53,082 INFO [lms_backend.db.items] [items.py:16] [trace_id=1f8e0dc8ee16d9adad28b0a8a94388cd span_id=da04c4dd67298206 resource.service.name=Learning Management Service trace_sampled=True] - db_query
-2026-04-02 04:54:53,175 INFO [lms_backend.main] [main.py:74] [trace_id=1f8e0dc8ee16d9adad28b0a8a94388cd span_id=da04c4dd67298206 resource.service.name=Learning Management Service trace_sampled=True] - request_completed
-```
-
-**Structured fields present:**
-- `trace_id=1f8e0dc8ee16d9adad28b0a8a94388cd` — Correlates all spans for this request
-- `span_id=da04c4dd67298206` — Identifies this specific span
-- `resource.service.name=Learning Management Service` — Service identifier
-- `trace_sampled=True` — Trace was sampled for VictoriaTraces
-- `event=request_started|auth_success|db_query|request_completed` — Event type
-
-**Error-path log excerpt (PostgreSQL stopped):**
-```
-2026-04-02 05:00:01,390 ERROR [lms_backend.routers.items] [items.py:34] [trace_id=578129bf34581aa7c1c6c9d9b03452a7 span_id=5e715eb7e1ed59e2 resource.service.name=Learning Management Service trace_sampled=True] - items_list_failed
+**VictoriaLogs JSON response (raw API output):**
+```json
+{
+  "_msg": "request_completed",
+  "_stream": "{service.name=\"Learning Management Service\",telemetry.sdk.language=\"python\",telemetry.sdk.name=\"opentelemetry\"}",
+  "_time": "2026-04-02T05:13:11.908863488Z",
+  "duration_ms": "1132",
+  "event": "request_completed",
+  "method": "GET",
+  "otelServiceName": "Learning Management Service",
+  "otelSpanID": "1e3697dd62a56a9b",
+  "otelTraceID": "1e05cb0211ee5ee2d5a4988a9b03549f",
+  "path": "/items/",
+  "severity": "INFO",
+  "status_code": "200"
+}
 ```
 
-**VictoriaLogs query:**
+**Structured fields in JSON format:**
+- `_time`: ISO 8601 timestamp
+- `severity`: Log level (INFO, ERROR, WARNING)
+- `event`: Event type (request_started, auth_success, db_query, request_completed)
+- `otelTraceID`: Trace correlation ID (32-char hex)
+- `otelSpanID`: Span identifier (16-char hex)
+- `otelServiceName`: Service identifier
+- `duration_ms`: Request duration
+- `status_code`: HTTP response code
+- `path`: Request path
+
+**Error log example (database failure):**
+```json
+{
+  "_msg": "items_list_failed",
+  "_time": "2026-04-02T05:00:01.390Z",
+  "severity": "ERROR",
+  "event": "items_list_failed",
+  "otelTraceID": "578129bf34581aa7c1c6c9d9b03452a7",
+  "otelSpanID": "5e715eb7e1ed59e2",
+  "otelServiceName": "Learning Management Service",
+  "error": "PostgreSQL connection failed"
+}
+```
+
+**VictoriaLogs LogsQL query:**
 ```
 _time:10m severity:ERROR resource.service.name:"Learning Management Service"
 ```
-
-This returns all ERROR level logs from the LMS backend in the last 10 minutes.
 
 ## Task 3B — Traces
 
@@ -222,6 +243,19 @@ trace_id: 578129bf34581aa7c1c6c9d9b03452a7
 - `mcp_obs_traces_list` — List recent traces for a service
 - `mcp_obs_traces_get` — Fetch specific trace by ID
 
+**Agent response to "Check for errors in the last 10 minutes and tell me the count":**
+```
+🐈 nanobot
+Good news! There are 0 errors in the last 10 minutes. The system appears to be  
+healthy.
+```
+
+**What the agent did:**
+1. Called `mcp_obs_logs_error_count(minutes=10)` 
+2. Received response: `{"time_window": "10 minutes", "errors_by_service": {}}`
+3. Interpreted empty error count as healthy system
+4. Reported: "0 errors in the last 10 minutes"
+
 **Agent response to "Any LMS backend errors in the last 10 minutes?":**
 ```
 🐈 nanobot
@@ -233,11 +267,11 @@ logged errors across any services during this time window.
 ```
 
 **Agent investigation flow:**
-1. Calls `mcp_obs_logs_error_count(minutes=10)` to check for recent errors
-2. If errors found, calls `mcp_obs_logs_search(query="severity:ERROR resource.service.name:\"Learning Management Service\"", time_range="10m")`
-3. Extracts `trace_id` from log results
+1. Calls `mcp_obs_logs_error_count(minutes=10)` to get error count by service
+2. If errors found, calls `mcp_obs_logs_search(query="severity:ERROR resource.service.name:\"Learning Management Service\"", time_range="10m", limit=20)`
+3. Extracts `otelTraceID` from log results
 4. Calls `mcp_obs_traces_get(trace_id="...")` to fetch full trace
-5. Summarizes findings: service name, error message, failing operation
+5. Summarizes findings: service name, error message, failing operation, trace ID
 
 **LogsQL query examples:**
 ```sql
@@ -252,6 +286,17 @@ _time:30m event:db_query severity:ERROR
 
 -- Find traces with errors
 _time:10m trace_id:* severity:ERROR
+```
+
+**VictoriaLogs API endpoint:**
+```
+GET http://localhost:42010/select/logsql/query?query=_time:1h%20severity:ERROR&limit=100
+```
+
+**VictoriaTraces API endpoint (Jaeger-compatible):**
+```
+GET http://localhost:42011/select/jaeger/api/traces?service=Learning%20Management%20Service&limit=10
+GET http://localhost:42011/select/jaeger/api/traces/{traceID}
 ```
 
 ## Task 4A — Multi-step investigation
