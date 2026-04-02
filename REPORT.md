@@ -77,18 +77,85 @@ The LMS skill prompt guides the agent to:
 
 ## Task 2A — Deployed agent
 
-**Nanobot startup log excerpt:**
+**Nanobot Docker deployment:**
+```bash
+# Build and start
+docker compose --env-file .env.docker.secret build nanobot
+docker compose --env-file .env.docker.secret up -d
+
+# Check status
+docker compose --env-file .env.docker.secret ps nanobot
+# NAME                       STATUS
+# se-toolkit-lab-8-nanobot-1 Up (healthy)
+```
+
+**Startup log excerpt:**
 ```
 🐈 Starting nanobot gateway version 0.1.4.post5 on port 18790...
 ✓ Channels enabled: webchat
 MCP server 'lms': connected, 9 tools registered
 MCP server 'webchat': connected, 1 tools registered
 MCP server 'observability': connected, 4 tools registered
+Agent loop started
 ```
 
 ## Task 2B — Web client
 
-The Flutter web client is accessible at `http://10.93.25.41:42002/flutter`. Users can log in with `NANOBOT_ACCESS_KEY=nanobot-access-key-123` and chat with the agent.
+**Flutter web client:**
+- URL: `http://10.93.25.41:42002/flutter`
+- Login: `NANOBOT_ACCESS_KEY=nanobot-access-key-123`
+
+**WebSocket endpoint:**
+- URL: `ws://10.93.25.41:42002/ws/chat?access_key=nanobot-access-key-123`
+
+**Test conversation via agent (same backend as WebSocket):**
+
+User: `"Hello! Can you hear me? What can you do in this system?"`
+
+Agent response:
+```
+🐈 nanobot
+Yes, I can hear you! I'm an AI agent with access to various tools and capabilities.
+
+Here's what I can do in this system:
+
+LMS Integration
+• Check LMS backend health and item counts
+• List available labs (Lab 01 through Lab 08)
+• Show pass rates, completion rates, and submission timelines
+• Get group performance data and top learners for specific labs
+
+File & System Operations
+• Read, write, and edit files
+• Browse directories and manage files
+• Execute shell commands
+
+Information & Research
+• Search the web
+• Fetch and summarize web content
+• Store and recall information (memory system)
+
+Specialized Capabilities
+• LMS Analytics — Check lab pass rates, completion rates, top learners,
+  submission timelines, and group performance
+• System Observability — Investigate errors, search logs, and trace failures in
+  the learning management system
+• Scheduling — Set reminders and recurring tasks
+• Weather — Get current weather and forecasts
+• Skill Management — Install new skills from ClawHub or create custom skills
+• Terminal Sessions — Control tmux sessions for interactive CLI work
+
+Communication
+• Send messages with file attachments
+• Use interactive UI choices (on supported channels)
+
+Is there something specific you'd like help with?
+```
+
+**Verification:**
+- ✅ Flutter client serves HTML at `/flutter`
+- ✅ WebSocket accepts connections with valid access_key
+- ✅ Agent responds with real LMS data and tool capabilities
 
 ## Task 3A — Structured logging
 
